@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// Product class defines the attributes and methods of a product object
+/// </summary>
 class Product {
     private int quantity;
     private string name;
@@ -38,9 +41,16 @@ class Product {
         return total;
     }
 }
-
+/// <summary>
+/// Products Setter sets products list
+/// </summary>
 class ProductsSetter
 {
+    /// <summary>
+    /// Uses list of string and split the strings to get the products information and creates a list of products
+    /// </summary>
+    /// <param name="lines"> List of string with products information</param>
+    /// <returns>List of products</returns>
     public List<Product> SetProducts(List<string> lines)
     {
         Dictionary<string, Product> nameProducts = new Dictionary<string, Product>();
@@ -53,7 +63,7 @@ class ProductsSetter
 
             if (nameProducts.ContainsKey(name))
             {
-                nameProducts[aux2.Last()].AddQuantity();
+                nameProducts[name].AddQuantity();
             }
             else
             {
@@ -63,9 +73,15 @@ class ProductsSetter
         return nameProducts.Values.ToList();
     }
 }
-
+/// <summary>
+/// Products input from console
+/// </summary>
 class ProductsInput
 {
+    /// <summary>
+    /// Read console input and returns a list of strings (lines)
+    /// </summary>
+    /// <returns> List of string</returns>
     public List<string> ReadProducts()
     {
         List<string> lines = new List<string>();
@@ -79,12 +95,18 @@ class ProductsInput
     }
 
 }
-interface IProductCalculator // For total, taxes and discounts
+/// <summary>
+/// Interface for total, taxes and discounts calculation
+/// </summary>
+interface IProductCalculator 
 {
     decimal GetTotal();
     void Calculate(Product product);
 }
-class TaxCalculator : IProductCalculator // Product taxes
+/// <summary>
+/// Tax calculation class
+/// </summary>
+class TaxCalculator : IProductCalculator
 {
     private static string[] freeTaxesProducts = new string[] { "Book", "Chocolate bar" };
     private static decimal tax = 0.10m;
@@ -94,7 +116,12 @@ class TaxCalculator : IProductCalculator // Product taxes
     {
         return taxTotal;
     }
-    public decimal RoundTaxes(decimal taxes)
+    /// <summary>
+    /// Round taxes after 5 cents
+    /// </summary>
+    /// <param name="taxes"> Receives the taxes</param>
+    /// <returns>Taxes rounded</returns>
+    private decimal RoundTaxes(decimal taxes)
     {
         if ((taxes % 5) % 2 == 0)
         {
@@ -105,6 +132,10 @@ class TaxCalculator : IProductCalculator // Product taxes
             return Math.Round(taxes, 2);
         }
     }
+    /// <summary>
+    /// Calculates the total taxes from a product
+    /// </summary>
+    /// <param name="product">Product</param>
     public void Calculate(Product product)
     {
         if (freeTaxesProducts.Contains(product.GetName()))
@@ -120,6 +151,9 @@ class TaxCalculator : IProductCalculator // Product taxes
         }        
     }
 }
+/// <summary>
+/// Calculate the total cost of a product based on the quantity listed.
+/// </summary>
 class TotalProductCalculator : IProductCalculator // Product total
 {
     private decimal totalProduct;
@@ -127,13 +161,19 @@ class TotalProductCalculator : IProductCalculator // Product total
     {
         return totalProduct;
     }
+    /// <summary>
+    /// Calculates the total price according to the quantity and the single unit price of a product
+    /// </summary>
+    /// <param name="product">Product</param>
     public void Calculate(Product product)
     {
         totalProduct = product.GetPrice() * product.GetQuantity();
     }
 }
+/// <summary>
+/// Total calculator gets the total ammount of money to pay and taxes total of a list of products 
+/// </summary>
 class TotalCalculator {
-    private static string[] freeTaxesProducts = new string[] { "Book", "Chocolate bar" };
     private List<Product> products;
     private decimal salesTaxes = 0.0m;
     private decimal total = 0m;
@@ -154,6 +194,9 @@ class TotalCalculator {
     {
         return total;
     }
+    /// <summary>
+    /// Calculates the totals using the IProductCalculator classes
+    /// </summary>
     public void Calculate()
     {
         IProductCalculator taxCalculator = new TaxCalculator();
@@ -174,9 +217,11 @@ class TotalCalculator {
 
 }
 
+/// <summary>
+/// Ticket printer prints the ticket information
+/// </summary>
 class TicketPrinter
 {
-
     private List<Product> products;
     private TotalCalculator totalCalculated;
     public TicketPrinter(TotalCalculator totalCalculated)
@@ -184,6 +229,9 @@ class TicketPrinter
         this.totalCalculated = totalCalculated;
         this.products = totalCalculated.GetProducts();
     }
+    /// <summary>
+    /// Uses the total calculator to get the totals by product and the final total and taxes.
+    /// </summary>
     public void PrintTicket()
     {
         string line;
@@ -198,7 +246,9 @@ class TicketPrinter
 
 }
 
-
+/// <summary>
+/// Main class
+/// </summary>
 class SalesTaxes{
     static public void Main(String[] args) {
 
