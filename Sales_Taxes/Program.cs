@@ -38,24 +38,13 @@ class Product {
         return total;
     }
 }
-class ProductsInput
+
+class ProductsSetter
 {
-    private static List<string> lines = new List<string>();
-    public ProductsInput() {}
-    public void ReadProducts()
+    public List<Product> SetProducts(List<string> lines)
     {
-        string line;
-        Console.WriteLine("Ingrese productos:\n");
-        while((line = Console.ReadLine()) != "")
-        {
-            lines.Add(line);
-        }
-        Console.WriteLine(lines.Count);
-    }
-    public List<Product> SetProducts()
-    {
-        Dictionary<string,Product> nameProducts = new Dictionary<string,Product>();
-        foreach(string line in lines)
+        Dictionary<string, Product> nameProducts = new Dictionary<string, Product>();
+        foreach (string line in lines)
         {
             string[] aux = line.Split(" at ");
             string price = aux.Last();
@@ -68,36 +57,42 @@ class ProductsInput
             }
             else
             {
-                nameProducts.Add(name, new Product(1, name, decimal.Parse(price) / 100 ));
-            }            
+                nameProducts.Add(name, new Product(1, name, decimal.Parse(price) / 100));
+            }
         }
         return nameProducts.Values.ToList();
     }
-
 }
 
-class Calculator {
+class ProductsInput
+{
+    public List<string> ReadProducts()
+    {
+        List<string> lines = new List<string>();
+        string line;
+        Console.WriteLine("Ingrese productos:\n");
+        while((line = Console.ReadLine()) != "")
+        {
+            lines.Add(line);
+        }
+        return lines;
+    }
+
+}
+interface IProductCalculator // For total, taxes and discounts
+{
+    decimal GetTotal();
+    void Calculate(Product product);
+}
+class TaxCalculator : IProductCalculator // Product taxes
+{
     private static string[] freeTaxesProducts = new string[] { "Book", "Chocolate bar" };
-    private List<Product> products;
-    private decimal salesTaxes = 0.0m;
-    private decimal total = 0m;
-    public Calculator(List<Product> products)
-    {
-        this.products = products;
-    }
+    private static decimal tax = 0.10m;
+    private decimal taxTotal;
 
-    public List<Product> GetProducts()
-    {
-        return products;
-    }
-
-    public decimal GetSalesTaxes()
-    {
-        return salesTaxes;
-    }
     public decimal GetTotal()
     {
-        return total;
+        return taxTotal;
     }
     public decimal RoundTaxes(decimal taxes)
     {
@@ -110,21 +105,70 @@ class Calculator {
             return Math.Round(taxes, 2);
         }
     }
+    public void Calculate(Product product)
+    {
+        if (freeTaxesProducts.Contains(product.GetName()))
+        {           
+           taxTotal = 0.0m;
+        }
+        else
+        {
+            IProductCalculator semiTotalCalculator = new TotalProductCalculator();
+            semiTotalCalculator.Calculate(product);
+            decimal semiTotal = semiTotalCalculator.GetTotal();
+            taxTotal = RoundTaxes(semiTotal * tax);
+        }        
+    }
+}
+class TotalProductCalculator : IProductCalculator // Product total
+{
+    private decimal totalProduct;
+    public decimal GetTotal()
+    {
+        return totalProduct;
+    }
+    public void Calculate(Product product)
+    {
+        totalProduct = product.GetPrice() * product.GetQuantity();
+    }
+}
+class TotalCalculator {
+    private static string[] freeTaxesProducts = new string[] { "Book", "Chocolate bar" };
+    private List<Product> products;
+    private decimal salesTaxes = 0.0m;
+    private decimal total = 0m;
+    public TotalCalculator(List<Product> products)
+    {
+        this.products = products;
+    }
+
+    public List<Product> GetProducts()
+    {
+        return products;
+    }
+    public decimal GetSalesTaxes()
+    {
+        return salesTaxes;
+    }
+    public decimal GetTotal()
+    {
+        return total;
+    }
     public void Calculate()
     {
-        foreach(Product product in products)
+        IProductCalculator taxCalculator = new TaxCalculator();
+        IProductCalculator totalProductCalculator = new TotalProductCalculator();
+        decimal totalProduct;
+        foreach (Product product in products)
         {
-            if (freeTaxesProducts.Contains(product.GetName())){
-                product.SetTotal(product.GetPrice()*product.GetQuantity());
-                total += product.GetPrice() * product.GetQuantity();
-            }
-            else
-            {
-                decimal semiTotal = product.GetPrice() * product.GetQuantity();
-                this.salesTaxes += RoundTaxes(semiTotal * 0.10m);
-                product.SetTotal( semiTotal + RoundTaxes(semiTotal * 0.10m));
-                total += semiTotal + RoundTaxes(semiTotal * 0.10m);
-            }
+            taxCalculator.Calculate(product);
+            totalProductCalculator.Calculate(product);
+
+            totalProduct = totalProductCalculator.GetTotal() + taxCalculator.GetTotal();
+            product.SetTotal(totalProduct);
+
+            total += totalProduct;
+            salesTaxes += taxCalculator.GetTotal();
         }
     }
 
@@ -134,18 +178,22 @@ class TicketPrinter
 {
 
     private List<Product> products;
-
-    public void PrintTicket(Calculator calculator)
+    private TotalCalculator totalCalculated;
+    public TicketPrinter(TotalCalculator totalCalculated)
     {
-        this.products = calculator.GetProducts();
+        this.totalCalculated = totalCalculated;
+        this.products = totalCalculated.GetProducts();
+    }
+    public void PrintTicket()
+    {
         string line;
         foreach (Product product in products) {
             line = product.GetName() + ": " + product.GetTotal().ToString("0.00");
             line += (product.GetQuantity() > 1) ? "("+product.GetQuantity()+" @ "+product.GetPrice().ToString("0.00")+ ")": "";
             Console.WriteLine(line);
         }
-        Console.WriteLine("Sales Taxes: "+calculator.GetSalesTaxes().ToString("0.00"));
-        Console.WriteLine("Total: "+calculator.GetTotal().ToString("0.00"));
+        Console.WriteLine("Sales Taxes: "+totalCalculated.GetSalesTaxes().ToString("0.00"));
+        Console.WriteLine("Total: "+ totalCalculated.GetTotal().ToString("0.00"));
     }
 
 }
@@ -154,12 +202,17 @@ class TicketPrinter
 class SalesTaxes{
     static public void Main(String[] args) {
 
-        ProductsInput p = new ProductsInput();
-        p.ReadProducts();
-        List<Product> products = p.SetProducts();
-        Calculator calculator = new Calculator(products);
+        // Read and setting of product list
+        ProductsInput input = new ProductsInput();
+        ProductsSetter productList = new ProductsSetter();
+        List<Product> products = productList.SetProducts(input.ReadProducts());
+
+        // Totals calculation
+        TotalCalculator calculator = new TotalCalculator(products);
         calculator.Calculate();
-        TicketPrinter ticketPrinter = new TicketPrinter();
-        ticketPrinter.PrintTicket(calculator);
+
+        // Printing
+        TicketPrinter ticketPrinter = new TicketPrinter(calculator);
+        ticketPrinter.PrintTicket();
     } 
 }
